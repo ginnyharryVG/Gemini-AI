@@ -1,0 +1,12 @@
+streamlit
+google-generativeai
+python-dotenv
+
+pip install streamlit.
+python -m streamlit hello.
+
+pip install -U google-generativeai
+
+ pip install -U python-dotenv
+
+
