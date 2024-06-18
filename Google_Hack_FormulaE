@@ -1,0 +1,71 @@
+%pip install --upgrade --quiet  langchain-google-genai pillow
+%pip install langchain_community
+%pip install langchain
+%pip install pypdf
+%pip install langchain_chroma
+
+import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+os.environ['GOOGLE_API_KEY'] = 'Your-Google-API-Key'
+
+from langchain.document_loaders import PyPDFLoader
+
+# Initialize the PyPDFLoader with the path to your PDF file
+loader = PyPDFLoader(r"/content/FormulaE2023Report-FINAL-.pdf")
+# Load the PDF document
+docs = loader.load()
+
+text_splitter = RecursiveCharacterTextSplitter(
+    # Set a really small chunk size, just to show.
+    chunk_size=2000,
+    chunk_overlap=200,
+    length_function=len,
+    is_separator_regex=False,
+)
+
+docs = text_splitter.split_documents(docs)
+
+docs
+
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+
+from langchain_chroma import Chroma
+
+db = Chroma.from_documents(docs, embeddings)
+
+retriever = db.as_retriever(search_kwargs={"k": 6})
+
+question = "what do they do about carbon management?"
+
+docs = retriever.get_relevant_documents(query=question)
+
+docs
+
+# Initialize an empty string to store the combined content
+combined_content = ""
+
+# Loop through each document and append its content to the combined string
+for doc in docs:
+    combined_content += doc.page_content + "\n"
+
+from langchain_core.messages import HumanMessage, SystemMessage
+
+model = ChatGoogleGenerativeAI(model="gemini-pro", convert_system_message_to_human=True)
+model(
+    [
+        SystemMessage(content=f"""You are a Formula E agent answering questions based on the informaion bellow
+
+        f{combined_content}"""),
+        HumanMessage(content= question),
+    ]
+)
+
